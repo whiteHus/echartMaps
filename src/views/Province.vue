@@ -1,45 +1,65 @@
 <template>
-  <div class="home">
-    <div class="count">总人数：{{count}}</div>
-    <div class="map-container" id="myEchart1"></div>
+  <div class="Province">
+     <div class="map1-container" id="myEchart"></div>
+     <div class="form">
+       <el-form ref="form" :model="form" label-width="80px">
+          <el-form-item label="省份名称">
+          {{form.name}}
+          </el-form-item>
+          <el-form-item label="感染人数">
+            <el-input v-model="form.value"></el-input>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="onSubmit">确定</el-button>
+            <el-button @click="$router.push({name:'Home'})">取消</el-button>
+          </el-form-item>
+        </el-form>
+     </div>
   </div>
 </template>
 
 <script>
 import china from './china.js';
-import { mapState} from 'vuex'
+import { mapMutations, mapState} from 'vuex'
 
 export default {
   name: 'Home',
   components: {
   },
-  data() {
+  data(){
     return{
-      count:0,
+      form: {
+          name: '',
+          value: 0,
+        }
     }
   },
   mounted(){
+    const {name,value} = this.$route.query
+    this.form = {name,value}
     this.drawLine();
-    this.count=this.seriesData.reduce((prev, cur)=> {
-        if(prev.value){
-          return prev.value + cur.value;
-        }else{
-          return prev + cur.value;
-        }
-    })
   },
   computed:{
       ...mapState(['seriesData']),
   },
   methods: {
+    ...mapMutations(['setSeriesData']),
     drawLine(){
         // 基于准备好的dom，初始化echarts实例
-        let myChart = this.$echarts.init(document.getElementById('myEchart1'))
-         this.$echarts.registerMap('china', china)
+        let myChart = this.$echarts.init(document.getElementById('myEchart'))
+        const _china =JSON.parse(JSON.stringify(china));
+         this.$echarts.registerMap('china', _china)
+         for (let i = 0; i < _china.features.length; i++) {
+           const el = _china.features[i];
+           if(el.properties.name===this.$route.query.name){
+             _china.features=[el];
+             break;
+           }
+         }
             // 绘制图表
             var option = {
                title: {
-                  text: '中国疫情分布图',
+                  text: `${this.form.nam}疫情分布图`,
                   left: 'center'
                 },
                   tooltip: {
@@ -91,29 +111,27 @@ export default {
             }
 
       myChart.setOption(option);
-      myChart.on('click', (param)=> {
-          this.$router.push({name:'Province',query:param.data});
-      });
+    },
+    onSubmit(){
+      const {name,value} = this.form
+      this.setSeriesData({name,value:parseInt(value)});  
+      this.$router.push({name:'Home'})
     }
   }
 }
 </script>
 
 <style lang="css">
-.map-container{
+.map1-container{
   height: 90vh;
-  width: 90vw;
-  padding: 20px;
+  width: 60vw;
+} 
+.Province{
+  display: flex;
+}
+.form{
+  flex: 1;
   border: 1px solid #ebebeb;
-}
-.home{
-   width: 90vw;
-   margin: 0 auto;
-}
-.count {
-  border: 2px solid #1456bc;
-  border-radius: 5px;
   padding: 20px;
-  position: fixed;
 }
 </style>
